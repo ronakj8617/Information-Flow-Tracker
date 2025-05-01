@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Data Flow</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f9fafb;
+            margin: 0;
+            padding: 20px;
+        }
+
+        form {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            border: 2px solid black;
+            max-width: 480px;
+            margin: auto;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 1.5rem;
+            color: #333;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #444;
+        }
+
+        input, select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border 0.3s;
+            border: 2px solid black;
+
+        }
+
+        input:focus, select:focus {
+            outline: none;
+        }
+
+        button {
+            background-color: black;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .message {
+            text-align: center;
+            font-weight: 500;
+            margin-top: 10px;
+            color: green;
+        }
+
+        @media (max-width: 500px) {
+            form {
+                padding: 16px;
+                border-radius: 8px;
+            }
+
+            h2 {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<form id="dataFlowForm">
+    <h2>Add Data Flow</h2>
+
+    <label for="dataId">Data ID</label>
+    <input type="text" id="dataId" name="dataId" required>
+
+    <label for="sourceComponent">Source Component</label>
+    <input type="text" id="sourceComponent" name="sourceComponent" required>
+
+    <label for="targetComponent">Target Component</label>
+    <input type="text" id="targetComponent" name="targetComponent" required>
+
+    <label for="sensitivity">Sensitivity</label>
+    <select id="sensitivity" name="sensitivity" required>
+        <option value="Confidential">Confidential</option>
+        <option value="Restricted">Restricted</option>
+        <option value="Internal">Internal</option>
+        <option value="Public">Public</option>
+    </select>
+
+    <button type="submit">Submit</button>
+    <div class="message" id="message"></div>
+</form>
+
+<script>
+    document.getElementById('dataFlowForm').addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const formData = {
+            sourceComponent: document.getElementById('sourceComponent').value,
+            targetComponent: document.getElementById('targetComponent').value,
+            dataId: document.getElementById('dataId').value,
+            sensitivity: document.getElementById('sensitivity').value.toUpperCase(),
+            timestamp: new Date().toISOString()
+        };
+
+        const response = await fetch('/api/flows', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        const messageEl = document.getElementById('message');
+        if (response.ok) {
+            messageEl.textContent = '✅ Data flow added successfully!';
+            messageEl.style.color = 'green';
+            document.getElementById('dataFlowForm').reset();
+        } else {
+            messageEl.textContent = '❌ Failed to add data flow.';
+            messageEl.style.color = 'red';
+        }
+    });
+</script>
+
+</body>
+</html>
