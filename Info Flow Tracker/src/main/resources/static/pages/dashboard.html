@@ -28,7 +28,7 @@
         nav button {
             background: none;
             border: none;
-            padding: 1rem;
+            /*padding: 1rem;*/
             font-size: 1rem;
             color: #ccc;
             cursor: pointer;
@@ -84,11 +84,34 @@
 
         #graph {
             width: 1000px;
-            height: 600px;
+            height: 500px;
             background: #181818;
             display: block;
+            border: 2px;
             margin: auto;
         }
+        #legend {
+            max-width: 1000px;
+            margin: 1rem auto 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            color: #ccc;
+        }
+
+        #legend div {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        #legend span {
+            display: inline-block;
+            border-radius: 50%;
+        }
+
     </style>
 </head>
 <body>
@@ -105,6 +128,14 @@
 
 <section id="flow" class="active">
     <svg id="graph" width="1000" height="600"></svg>
+    <div id="legend">
+        <div><span style="width: 16px; height: 16px; background: red;"></span> Confidential</div>
+        <div><span style="width: 16px; height: 16px; background: orange;"></span> Restricted</div>
+        <div><span style="width: 16px; height: 16px; background: yellow;"></span> Internal</div>
+        <div><span style="width: 16px; height: 16px; background: green;"></span> Public</div>
+        <div><span style="width: 24px; height: 4px; background: red; border-radius: 0;"></span> Violation Link</div>
+    </div>
+
 </section>
 
 <section id="access">
