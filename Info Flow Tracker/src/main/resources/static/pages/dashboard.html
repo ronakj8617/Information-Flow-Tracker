@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>InfoFlow Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            background-color: #121212;
+            color: #fff;
+        }
+
+        header {
+            padding: 1rem;
+            text-align: center;
+            background-color: #1f1f1f;
+            border-bottom: 1px solid #333;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #1a1a1a;
+        }
+
+        nav button {
+            background: none;
+            border: none;
+            padding: 1rem;
+            font-size: 1rem;
+            color: #ccc;
+            cursor: pointer;
+        }
+
+        nav button.active {
+            color: white;
+            border-bottom: 2px solid white;
+        }
+
+        section {
+            display: none;
+            padding: 2rem;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        form {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 500px;
+            margin: auto;
+            box-shadow: 0 0 10px rgba(255,255,255,0.05);
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background: #2a2a2a;
+            color: white;
+        }
+
+        button {
+            background-color: #333;
+            border: none;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+
+        .message {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #graph {
+            width: 100%;
+            height: 80vh;
+            background: #181818;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Information Flow Tracker</h1>
+</header>
+
+<nav>
+    <button class="tab active" onclick="showTab('flow')">Flow Visualizer</button>
+    <button class="tab" onclick="showTab('access')">Access Log</button>
+</nav>
+
+<section id="flow" class="active">
+    <svg id="graph"></svg>
+</section>
+
+<section id="access">
+    <form id="accessForm">
+        <h2>Log Access</h2>
+        <input type="text" id="userId" placeholder="User ID" required>
+        <input type="text" id="dataResource" placeholder="Data Resource" required>
+        <input type="text" id="action" placeholder="Action" required>
+        <select id="sensitivityLevel" required>
+            <option value="CONFIDENTIAL">Confidential</option>
+            <option value="RESTRICTED">Restricted</option>
+            <option value="INTERNAL">Internal</option>
+            <option value="PUBLIC">Public</option>
+        </select>
+        <button type="submit">Submit Access Log</button>
+        <div class="message" id="accessMessage"></div>
+    </form>
+</section>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+    // Tab functionality
+    function showTab(tabId) {
+        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        document.querySelector(`button[onclick*="${tabId}"]`).classList.add('active');
+    }
+
+    // Submit access log
+    document.getElementById('accessForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const formData = {
+            userId: document.getElementById('userId').value,
+            dataResource: document.getElementById('dataResource').value,
+            action: document.getElementById('action').value,
+            sensitivityLevel: document.getElementById('sensitivityLevel').value
+        };
+
+        const response = await fetch('/api/data/access', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        const msg = document.getElementById('accessMessage');
+        if (response.ok) {
+            msg.textContent = "Access log saved successfully.";
+            msg.style.color = "lightgreen";
+            document.getElementById('accessForm').reset();
+        } else {
+            msg.textContent = "Failed to log access.";
+            msg.style.color = "red";
+        }
+    });
+
+    // Fetch and render flow graph
+    const taintColors = {
+        "CONFIDENTIAL": "red",
+        "RESTRICTED": "orange",
+        "INTERNAL": "yellow",
+        "PUBLIC": "green"
+    };
+
+    fetch('/api/flows')
+        .then(res => res.json())
+        .then(data => renderGraph(data));
+
+    function renderGraph(data) {
+        const nodesMap = new Map();
+        const links = [];
+
+        data.forEach(d => {
+            const src = d.sourceComponent;
+            const tgt = d.targetComponent;
+            const taint = d.sensitivity;
+
+            if (!nodesMap.has(src)) nodesMap.set(src, { id: src, taint });
+            if (!nodesMap.has(tgt)) nodesMap.set(tgt, { id: tgt, taint });
+
+            const violation = taint === "CONFIDENTIAL" && nodesMap.get(tgt)?.taint !== "CONFIDENTIAL";
+            links.push({ source: src, target: tgt, violation });
+        });
+
+        const nodes = Array.from(nodesMap.values());
+        const svg = d3.select("#graph");
+        const width = +svg.attr("width") || window.innerWidth;
+        const height = +svg.attr("height") || window.innerHeight - 150;
+
+        const container = svg.attr("width", width).attr("height", height).append("g");
+
+        svg.call(d3.zoom().on("zoom", ({ transform }) => {
+            container.attr("transform", transform);
+        }));
+
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).id(d => d.id).distance(200))
+            .force("charge", d3.forceManyBody().strength(-400))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        container.append('defs').append('marker')
+            .attr('id', 'arrowhead')
+            .attr('viewBox', '0 -5 10 10')
+            .attr('refX', 23)
+            .attr('refY', 0)
+            .attr('orient', 'auto')
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('xoverflow', 'visible')
+            .append('path')
+            .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
+            .attr('fill', '#999');
+
+        const link = container.append("g")
+            .selectAll("line")
+            .data(links)
+            .enter().append("line")
+            .attr("stroke", d => d.violation ? "red" : "#888")
+            .attr("stroke-width", 2)
+            .attr("marker-end", "url(#arrowhead)");
+
+        const node = container.append("g")
+            .selectAll("circle")
+            .data(nodes)
+            .enter().append("circle")
+            .attr("r", 16)
+            .attr("fill", d => taintColors[d.taint] || "gray")
+            .attr("stroke", "white")
+            .attr("stroke-width", 1.5)
+            .call(d3.drag()
+                .on("start", dragStart)
+                .on("drag", dragging)
+                .on("end", dragEnd));
+
+        const tooltip = d3.select("body").append("div")
+            .style("position", "absolute")
+            .style("background", "#fff")
+            .style("color", "#000")
+            .style("padding", "4px 8px")
+            .style("border-radius", "4px")
+            .style("opacity", 0);
+
+        node.on("mouseover", (e, d) => {
+            tooltip.transition().duration(200).style("opacity", .9);
+            tooltip.html(`<b>${d.id}</b><br/>Taint: ${d.taint}`)
+                .style("left", (e.pageX + 10) + "px")
+                .style("top", (e.pageY - 28) + "px");
+        }).on("mouseout", () => {
+            tooltip.transition().duration(300).style("opacity", 0);
+        });
+
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+        });
+
+        function dragStart(event) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            event.subject.fx = event.subject.x;
+            event.subject.fy = event.subject.y;
+        }
+
+        function dragging(event) {
+            event.subject.fx = event.x;
+            event.subject.fy = event.y;
+        }
+
+        function dragEnd(event) {
+            if (!event.active) simulation.alphaTarget(0);
+            event.subject.fx = null;
+            event.subject.fy = null;
+        }
+    }
+</script>
+</body>
+</html>
