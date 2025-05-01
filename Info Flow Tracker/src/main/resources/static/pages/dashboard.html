@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InfoFlow Dashboard</title>
     <style>
         body {
@@ -53,7 +54,7 @@
             border-radius: 8px;
             max-width: 500px;
             margin: auto;
-            box-shadow: 0 0 10px rgba(255,255,255,0.05);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
         }
 
         input, select, button {
@@ -82,9 +83,11 @@
         }
 
         #graph {
-            width: 100%;
-            height: 80vh;
+            width: 1000px;
+            height: 600px;
             background: #181818;
+            display: block;
+            margin: auto;
         }
     </style>
 </head>
@@ -94,13 +97,14 @@
 </header>
 
 <nav>
-    <button class="tab active" onclick="showTab('flow')">Flow Visualizer</button>
-    <button class="tab" onclick="showTab('access')">Access Logs</button>
-    <button class="tab" onclick="showTab('search')">Search Logs</button>
+    <button class="tab active" onclick="showTab('flow')" aria-label="Flow Visualizer Tab">Flow Visualizer</button>
+    <button class="tab" onclick="showTab('access')" aria-label="Access Logs Tab">Access Logs</button>
+    <button class="tab" onclick="showTab('search')" aria-label="Search Logs Tab">Search Logs</button>
+    <button class="tab" onclick="showTab('adddata')" aria-label="Search Logs Tab">Add Data Flow</button>
 </nav>
 
 <section id="flow" class="active">
-    <svg id="graph"></svg>
+    <svg id="graph" width="1000" height="600"></svg>
 </section>
 
 <section id="access">
@@ -119,7 +123,8 @@
         <div class="message" id="accessMessage"></div>
     </form>
 </section>
-<section id ="search">
+
+<section id="search">
     <form id="searchAccessForm" style="margin-bottom: 2rem;">
         <h2>Search Access Logs</h2>
         <input type="text" id="searchUserId" placeholder="User ID">
@@ -155,9 +160,35 @@
         <button id="nextPage" style="margin-left: 1rem;">Next</button>
     </div>
 </section>
+<section id="adddata">
+    <form id="dataFlowForm">
+        <h2>Add Data Flow</h2>
+
+        <label for="dataId">Data ID</label>
+        <input type="text" id="dataId" name="dataId" required>
+
+        <label for="sourceComponent">Source Component</label>
+        <input type="text" id="sourceComponent" name="sourceComponent" required>
+
+        <label for="targetComponent">Target Component</label>
+        <input type="text" id="targetComponent" name="targetComponent" required>
+
+        <label for="sensitivity">Sensitivity</label>
+        <select id="sensitivity" name="sensitivity" required>
+            <option value="Confidential">Confidential</option>
+            <option value="Restricted">Restricted</option>
+            <option value="Internal">Internal</option>
+            <option value="Public">Public</option>
+        </select>
+
+        <button type="submit">Submit</button>
+        <div class="message" id="message"></div>
+    </form>
+
+</section>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
-    // Tab functionality
+    // Tab switching
     function showTab(tabId) {
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
@@ -177,7 +208,7 @@
 
         const response = await fetch('/api/data/access', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(formData)
         });
 
@@ -187,12 +218,14 @@
             msg.style.color = "lightgreen";
             document.getElementById('accessForm').reset();
         } else {
+            const errorText = await response.text();
+            console.error('Failed to log access:', errorText);
             msg.textContent = "Failed to log access.";
             msg.style.color = "red";
         }
     });
 
-    // Fetch and render flow graph
+    // Flow graph rendering
     const taintColors = {
         "CONFIDENTIAL": "red",
         "RESTRICTED": "orange",
@@ -213,21 +246,21 @@
             const tgt = d.targetComponent;
             const taint = d.sensitivity;
 
-            if (!nodesMap.has(src)) nodesMap.set(src, { id: src, taint });
-            if (!nodesMap.has(tgt)) nodesMap.set(tgt, { id: tgt, taint });
+            if (!nodesMap.has(src)) nodesMap.set(src, {id: src, taint});
+            if (!nodesMap.has(tgt)) nodesMap.set(tgt, {id: tgt, taint});
 
             const violation = taint === "CONFIDENTIAL" && nodesMap.get(tgt)?.taint !== "CONFIDENTIAL";
-            links.push({ source: src, target: tgt, violation });
+            links.push({source: src, target: tgt, violation});
         });
 
         const nodes = Array.from(nodesMap.values());
         const svg = d3.select("#graph");
-        const width = +svg.attr("width") || window.innerWidth;
-        const height = +svg.attr("height") || window.innerHeight - 150;
+        const width = +svg.attr("width");
+        const height = +svg.attr("height");
 
-        const container = svg.attr("width", width).attr("height", height).append("g");
+        const container = svg.append("g");
 
-        svg.call(d3.zoom().on("zoom", ({ transform }) => {
+        svg.call(d3.zoom().on("zoom", ({transform}) => {
             container.attr("transform", transform);
         }));
 
@@ -244,7 +277,6 @@
             .attr('orient', 'auto')
             .attr('markerWidth', 6)
             .attr('markerHeight', 6)
-            .attr('xoverflow', 'visible')
             .append('path')
             .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
             .attr('fill', '#999');
@@ -316,8 +348,8 @@
             event.subject.fy = null;
         }
     }
-</script>
-<script>
+
+    // Search logs
     let currentPage = 1;
     const pageSize = 5;
     let currentData = [];
@@ -359,6 +391,8 @@
                 pagination.style.display = 'block';
             }
         } else {
+            const errorText = await res.text();
+            console.error('Search error:', errorText);
             msg.textContent = 'Failed to fetch search results.';
             msg.style.color = 'red';
         }
@@ -401,6 +435,35 @@
         if (currentPage < Math.ceil(currentData.length / pageSize)) {
             currentPage++;
             renderTablePage(currentPage);
+        }
+    });
+</script>
+<script>
+    document.getElementById('dataFlowForm').addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const formData = {
+            sourceComponent: document.getElementById('sourceComponent').value,
+            targetComponent: document.getElementById('targetComponent').value,
+            dataId: document.getElementById('dataId').value,
+            sensitivity: document.getElementById('sensitivity').value.toUpperCase(),
+            timestamp: new Date().toISOString()
+        };
+
+        const response = await fetch('/api/flows', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+
+        const messageEl = document.getElementById('message');
+        if (response.ok) {
+            messageEl.textContent = '✅ Data flow added successfully!';
+            messageEl.style.color = 'green';
+            document.getElementById('dataFlowForm').reset();
+        } else {
+            messageEl.textContent = '❌ Failed to add data flow.';
+            messageEl.style.color = 'red';
         }
     });
 </script>
