@@ -19,7 +19,7 @@ import org.springframework.http.ResponseEntity;
 @RestController
 @RequestMapping("/api/data")
 public class TestConnection {
-//    @Value("${spring.data.mongodb.uri}")
+    @Value("${spring.data.mongodb.uri}")
     String connectionString;
 
     @GetMapping("/test")
