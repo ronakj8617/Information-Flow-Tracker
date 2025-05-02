@@ -5,9 +5,9 @@ FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
 # Copy the Maven build artifact (update .jar file name)
-COPY target/Information-Flow-Tracker-0.0.1-SNAPSHOT.jar app.jar
+COPY target/info-flow-tracker-0.0.1-SNAPSHOT.jar app.jar
 
-# Set environment variable for port 
+# Set environment variable for port
 ENV PORT=8080
 
 # Expose the port
