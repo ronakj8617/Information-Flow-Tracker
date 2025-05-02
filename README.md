@@ -1,6 +1,6 @@
 # 🛡️ Information Flow Tracker (IFT)
 
-A prototype system that implements ** information flow tracking** for Java-based component systems using **Spring Boot** and **MongoDB**. This project aligns with ongoing research in **unified def-site and use-site security policies** for component-based software systems.
+A prototype system that implements **information flow tracking** for Java-based component systems using **Spring Boot** and **MongoDB**. This project aligns with ongoing research in **unified def-site and use-site security policies** for component-based software systems.
 
 ---
 
