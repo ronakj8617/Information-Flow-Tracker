@@ -16,10 +16,8 @@ public class TaintTrackerService {
         if (isViolation(level, getTargetSensitivity(target))) {
             throw new SecurityException("Taint policy violated!"); // Enforce policy
         }
-        // Log data flow
     }
 
-    // In practice, we would fetch this dynamically or have it in the DB
     private SensitivityLevel getTargetSensitivity(String target) {
         // Mock logic: Just an example, this can be more sophisticated
         if (target.equals("public_resource")) return SensitivityLevel.PUBLIC;
