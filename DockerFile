@@ -2,7 +2,7 @@
 FROM eclipse-temurin:17-jdk
 
 # Set working directory
-WORKDIR /Info Flow Tracker
+WORKDIR /app
 
 # Copy the Maven build artifact (update .jar file name)
 COPY target/Information-Flow-Tracker-0.0.1-SNAPSHOT.jar app.jar
