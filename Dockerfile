@@ -1,9 +1,10 @@
 # Stage 1: build
-FROM maven:3.9.0-openjdk-17 AS build
+FROM maven:3.9.9-amazoncorretto-8-al2023 AS build
 WORKDIR /app
-COPY pom.xml .
-RUN mvn dependency:go-offline
-COPY src ./src
+
+# Copy the entire project (excluding target via .dockerignore if needed)
+COPY info-flow-tracker . 
+
 RUN mvn clean package -DskipTests
 
 # Stage 2: runtime
